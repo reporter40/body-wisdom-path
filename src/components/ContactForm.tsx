@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Send } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const ContactForm = () => {
   const { toast } = useToast();
@@ -47,17 +48,35 @@ const ContactForm = () => {
 
     setIsSubmitting(true);
 
-    // Simulate form submission
-    // In production, this would send data to Telegram bot
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const { data, error } = await supabase.functions.invoke("send-telegram", {
+        body: {
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          message: formData.message.trim() || undefined,
+        },
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      if (error) {
+        throw error;
+      }
 
-    toast({
-      title: "Заявка отправлена!",
-      description: "Я свяжусь с вами в ближайшее время",
-    });
+      setIsSubmitted(true);
+      toast({
+        title: "Заявка отправлена!",
+        description: "Я свяжусь с вами в ближайшее время",
+      });
+    } catch (error) {
+      console.error("Error sending form:", error);
+      toast({
+        title: "Ошибка отправки",
+        description: "Попробуйте ещё раз или свяжитесь напрямую",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
